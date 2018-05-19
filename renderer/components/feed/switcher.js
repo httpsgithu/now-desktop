@@ -108,13 +108,14 @@ class Switcher extends Component {
   // file is updated from this component
   savingConfig = false
 
-  static getDerivedStateFromProps({ currentUser, activeScope }, { scope }) {
+  // eslint-disable-next-line camelcase
+  UNSAFE_componentWillReceiveProps({ currentUser, activeScope }) {
     if (activeScope) {
       this.changeScope(activeScope, true, true, true)
       return null
     }
 
-    if (!currentUser || scope !== null) {
+    if (!currentUser || this.state.scope !== null) {
       return null
     }
 
