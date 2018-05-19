@@ -150,7 +150,7 @@ class Feed extends Component {
     const query = Object.assign(defaults, customParams)
 
     if (query.types) {
-      query.types = Array.from(query.types).join(',')
+      query.types = [...query.types].join(',')
     }
 
     const params = queryString.stringify(query)
@@ -191,7 +191,7 @@ class Feed extends Component {
     }
 
     const relatedCache = teams.find(item => item.id === scope)
-    const lastUpdate = relatedCache.lastUpdate
+    const { lastUpdate } = relatedCache
     const isTeam = Boolean(relatedCache.slug)
 
     const groups = this.getGroups(isTeam)
@@ -392,7 +392,8 @@ class Feed extends Component {
 
   lineStates = ['online', 'offline']
 
-  async componentWillMount() {
+  // eslint-disable-next-line camelcase
+  async UNSAFE_componentWillMount() {
     // Support SSR
     if (typeof window === 'undefined') {
       return
@@ -703,7 +704,7 @@ class Feed extends Component {
       return
     }
 
-    const scope = this.state.scope
+    const { scope, teams } = this.state
     const events = this.state.events[scope]
     const group = this.getCurrentGroup()
 
@@ -711,7 +712,6 @@ class Feed extends Component {
       return
     }
 
-    const teams = this.state.teams
     const relatedTeam = teams.find(item => item.id === scope)
     const allCached = relatedTeam.allCached && relatedTeam.allCached[group]
 
