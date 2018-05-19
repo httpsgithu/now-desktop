@@ -32,57 +32,9 @@ import Avatar from './avatar'
 import CreateTeam from './create-team'
 
 class Switcher extends Component {
-  state = {
-    teams: [],
-    scope: null,
-    updateFailed: false,
-    online: true,
-    initialized: false,
-    syncInterval: '5s'
-  }
+  constructor(props) {
+    super(props)
 
-  remote = electron.remote || false
-  ipcRenderer = electron.ipcRenderer || false
-  setReference = setRef.bind(this)
-
-  load = file => {
-    if (electron.remote) {
-      return electron.remote.require(file)
-    }
-
-    return null
-  }
-
-  binaryUtils = this.load('./utils/binary')
-  configUtils = this.load('./utils/config')
-
-  // Don't update state when dragging teams
-  moving = false
-
-  // Ensure that config doesn't get checked when the
-  // file is updated from this component
-  savingConfig = false
-
-  componentWillReceiveProps({ currentUser, activeScope }) {
-    if (activeScope) {
-      this.changeScope(activeScope, true, true, true)
-      return
-    }
-
-    if (!currentUser) {
-      return
-    }
-
-    if (this.state.scope !== null) {
-      return
-    }
-
-    this.setState({
-      scope: currentUser.uid
-    })
-  }
-
-  componentWillMount() {
     // Support SSR
     if (typeof window === 'undefined') {
       return
@@ -123,6 +75,52 @@ class Switcher extends Component {
 
       document.removeEventListener('keydown', this.keyDown.bind(this))
     })
+  }
+
+  state = {
+    teams: [],
+    scope: null,
+    updateFailed: false,
+    online: true,
+    initialized: false,
+    syncInterval: '5s'
+  }
+
+  remote = electron.remote || false
+  ipcRenderer = electron.ipcRenderer || false
+  setReference = setRef.bind(this)
+
+  load = file => {
+    if (electron.remote) {
+      return electron.remote.require(file)
+    }
+
+    return null
+  }
+
+  binaryUtils = this.load('./utils/binary')
+  configUtils = this.load('./utils/config')
+
+  // Don't update state when dragging teams
+  moving = false
+
+  // Ensure that config doesn't get checked when the
+  // file is updated from this component
+  savingConfig = false
+
+  static getDerivedStateFromProps({ currentUser, activeScope }) {
+    if (activeScope) {
+      this.changeScope(activeScope, true, true, true)
+      return null
+    }
+
+    if (!currentUser || this.state.scope !== null) {
+      return null
+    }
+
+    return {
+      scope: currentUser.uid
+    }
   }
 
   setOnlineState() {
@@ -233,7 +231,7 @@ class Switcher extends Component {
   }
 
   resetScope() {
-    const currentUser = this.props.currentUser
+    const { currentUser } = this.props
 
     if (!currentUser) {
       return
@@ -391,14 +389,15 @@ class Switcher extends Component {
     }
 
     const currentWindow = this.remote.getCurrentWindow()
+    const { setTeams, currentUser } = this.props
 
     // If the window isn't visible, don't pull the teams
     // Ensure to always load the first chunk
     if (!currentWindow.isVisible() && this.state.initialized) {
-      if (this.props.setTeams) {
+      if (setTeams) {
         // When passing `null`, the feed will only
         // update the events, not the teams
-        await this.props.setTeams(null, firstLoad)
+        await setTeams(null, firstLoad)
       }
 
       return
@@ -410,8 +409,8 @@ class Switcher extends Component {
       return
     }
 
-    const teams = data.teams
-    const user = this.props.currentUser
+    const { teams } = data
+    const user = currentUser
 
     teams.unshift({
       id: user.uid,
@@ -420,22 +419,22 @@ class Switcher extends Component {
 
     const updated = await this.haveUpdated(teams)
 
-    const scopeExists = updated.find(team => {
-      return this.state.scope === team.id
-    })
-
-    if (!scopeExists) {
-      this.resetScope()
-    }
-
     if (updated) {
+      const scopeExists = updated.find(team => {
+        return this.state.scope === team.id
+      })
+
+      if (!scopeExists) {
+        this.resetScope()
+      }
+
       this.setState({ teams: updated })
     }
 
-    if (this.props.setTeams) {
+    if (setTeams) {
       // When passing `null`, the feed will only
       // update the events, not the teams
-      await this.props.setTeams(updated || null, firstLoad)
+      await setTeams(updated || null, firstLoad)
     }
   }
 
@@ -446,7 +445,7 @@ class Switcher extends Component {
       return
     }
 
-    const code = event.code
+    const { code } = event
     const number = code.includes('Digit') ? code.split('Digit')[1] : false
 
     if (number && number <= 9 && this.state.teams.length > 1) {
@@ -499,7 +498,7 @@ class Switcher extends Component {
       return
     }
 
-    const currentUser = this.props.currentUser
+    const { currentUser } = this.props
 
     if (!currentUser) {
       return
@@ -529,7 +528,7 @@ class Switcher extends Component {
       const { getFile } = this.binaryUtils
 
       // Only show the notification if the CLI is installed
-      if (!await exists(getFile())) {
+      if (!(await exists(getFile()))) {
         return
       }
 
@@ -630,12 +629,12 @@ class Switcher extends Component {
 
   scrollToEnd = event => {
     event.preventDefault()
+    const { list } = this
 
-    if (!this.list) {
+    if (!list) {
       return
     }
 
-    const list = this.list
     list.scrollLeft = list.offsetWidth
   }
 
