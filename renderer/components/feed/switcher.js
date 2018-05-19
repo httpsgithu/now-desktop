@@ -108,13 +108,13 @@ class Switcher extends Component {
   // file is updated from this component
   savingConfig = false
 
-  static getDerivedStateFromProps({ currentUser, activeScope }) {
+  static getDerivedStateFromProps({ currentUser, activeScope }, { scope }) {
     if (activeScope) {
       this.changeScope(activeScope, true, true, true)
       return null
     }
 
-    if (!currentUser || this.state.scope !== null) {
+    if (!currentUser || scope !== null) {
       return null
     }
 
